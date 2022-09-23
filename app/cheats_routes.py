@@ -72,26 +72,25 @@ def create_new_cheat():
         {'title': title, 'owner_id': owner_id})
     if cheat is not None:
         return make_response({'status': 'error', 'message': 'Cheat already exists'}), 400
-    else:
-        # статусы чита:
-        # working - работает, on_update - на обновлении, stopped - остановлен
+    # статусы чита:
+    # working - работает, on_update - на обновлении, stopped - остановлен
 
-        # секретный ключ чита, который используется при AES шифровании
-        # Генерируем ключ шифрования
-        letters_and_digits = string.ascii_letters + string.digits
-        secret_key = ''.join(random.sample(letters_and_digits, 16))
+    # секретный ключ чита, который используется при AES шифровании
+    # Генерируем ключ шифрования
+    letters_and_digits = string.ascii_letters + string.digits
+    secret_key = ''.join(random.sample(letters_and_digits, 16))
 
-        object_id = str(cheats_database.cheats.insert_one({
-            'title': title, 'owner_id': owner_id, 'version': version, 
-            'subscribers': 0, 'subscribers_for_all_time': 0, 
-            'subscribers_today': 0, 'undetected': True, 
-            'created_date': datetime.now(), 'updated_date': datetime.now(),
-            'status': 'working', 'secret_key': secret_key
-        }).inserted_id)
+    object_id = str(cheats_database.cheats.insert_one({
+        'title': title, 'owner_id': owner_id, 'version': version, 
+        'subscribers': 0, 'subscribers_for_all_time': 0, 
+        'subscribers_today': 0, 'undetected': True, 
+        'created_date': datetime.now(), 'updated_date': datetime.now(),
+        'status': 'working', 'secret_key': secret_key
+    }).inserted_id)
 
-    return make_response({'status': 'ok', 
-                          'object_id': object_id, 
-                          'secret_key': str(secret_key)})
+    return make_response(
+        {'status': 'ok', 'object_id': object_id, 'secret_key': secret_key}
+    )
 
 
 @app.route('/api/cheats/', methods=["GET"])

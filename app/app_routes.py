@@ -69,10 +69,7 @@ def update_online_counter(cheat_id, secret_data):
 
 
 def is_job_in_job(jobs, job_id):
-    for job in jobs:
-        if job_id == job.id:
-            return True
-    return False
+    return any(job_id == job.id for job in jobs)
 
 
 @app.route('/api/app/online/<string:cheat_id>/', methods=["GET"])
@@ -139,7 +136,7 @@ def update_online():
         return make_response(
             {'status': 'error', 
              'message': 'One of the parameters specified was missing or invalid'}), 400
-    
+
     # схема тут такая:
     # 1. если пользователя в счётчике онлайна нет, то добавляем его. 
     # Устанавливаем ему job на удаление из счётчика через 2 минуты
@@ -147,19 +144,24 @@ def update_online():
     # job на удаление из счётчика (откладываем на 2 минуты)
     # таким образом, если пользователь не будет подавать онлайн 
     # сигнала 2 минуты, то он удалится из счётчика
-    if cheat_id in subscribers_database.list_collection_names():
-        if subscribers_database[cheat_id].find_one({'secret_data': secret_data}) is not None:
-            if cheat_id not in online_counter_dict:
-                online_counter_dict.update({cheat_id: [secret_data]})
-            elif secret_data not in online_counter_dict[cheat_id]:
-                online_counter_dict[cheat_id].append(secret_data)
+    if (
+        cheat_id in subscribers_database.list_collection_names()
+        and subscribers_database[cheat_id].find_one(
+            {'secret_data': secret_data}
+        )
+        is not None
+    ):
+        if cheat_id not in online_counter_dict:
+            online_counter_dict.update({cheat_id: [secret_data]})
+        elif secret_data not in online_counter_dict[cheat_id]:
+            online_counter_dict[cheat_id].append(secret_data)
 
-            all_jobs = scheduler.get_jobs()
-            if not is_job_in_job(all_jobs, secret_data):
-                scheduler.add_job(id=secret_data, func=update_online_counter, trigger="date",
-                                  run_date=datetime.now() + timedelta(minutes=2),
-                                  kwargs={'cheat_id': cheat_id, 'secret_data': secret_data})
-            else:
-                scheduler.modify_job(
-                    secret_data, next_run_time=datetime.now() + timedelta(minutes=2))
+        all_jobs = scheduler.get_jobs()
+        if not is_job_in_job(all_jobs, secret_data):
+            scheduler.add_job(id=secret_data, func=update_online_counter, trigger="date",
+                              run_date=datetime.now() + timedelta(minutes=2),
+                              kwargs={'cheat_id': cheat_id, 'secret_data': secret_data})
+        else:
+            scheduler.modify_job(
+                secret_data, next_run_time=datetime.now() + timedelta(minutes=2))
     return ''
