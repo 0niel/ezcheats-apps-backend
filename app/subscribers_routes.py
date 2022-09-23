@@ -52,7 +52,7 @@ def get_all_user_subscriptions(user_id):
             subscription_obj = {'cheat_id': cheat_id, 'subscriber': subscriber}
             subscriptions.append(subscription_obj)
 
-    if len(subscriptions) > 0:
+    if subscriptions:
         return make_response({'subscriptions': subscriptions})
 
     return make_response({'status': 'error', 'message': 'Subscriptions not found'}), 400
@@ -163,14 +163,8 @@ def add_subscriber_or_subscription():
         if cheat is None:
             return make_response({'status': 'error', 'message': 'Cheat not found'}), 400
 
-        # список необязательных параметров:
-        ip_address = ''
-        lifetime = False
-        if 'lifetime' in data:
-            lifetime = data['lifetime']
-        if 'ip_address' in data:
-            ip_address = data['ip_address']
-
+        lifetime = data['lifetime'] if 'lifetime' in data else False
+        ip_address = data['ip_address'] if 'ip_address' in data else ''
         # ID пользователя на сайте
         subscriber_user_id = data['user_id']
         # ник пользователя на сайте. Используется для поиска подписчика по нику
@@ -178,13 +172,15 @@ def add_subscriber_or_subscription():
 
         if DISCOURSE_API_KEY is not None:
             discourse_user_info = requests.get(
-                'https://forum.ezcheats.ru/admin/users/{}.json'.format(
-                    subscriber_user_id
-                    ), headers={'Api-Key': DISCOURSE_API_KEY}).json()
+                f'https://forum.ezcheats.ru/admin/users/{subscriber_user_id}.json',
+                headers={'Api-Key': DISCOURSE_API_KEY},
+            ).json()
+
             if 'errors' in discourse_user_info:
                 if 'error_type' == 'not_found':
                     return make_response({'status': 'error', 'message': 'User not found'}), 400
-                return make_response({'status': 'error', 'message': discourse_user_info['errors'][0]}), 400
+                else:
+                    return make_response({'status': 'error', 'message': discourse_user_info['errors'][0]}), 400
 
             user_name = discourse_user_info['username']
 
